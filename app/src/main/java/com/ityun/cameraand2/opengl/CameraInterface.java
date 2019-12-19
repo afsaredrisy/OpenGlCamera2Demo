@@ -19,7 +19,6 @@ public class CameraInterface {
     private Camera mCamera;
     private Camera.Parameters mParams;
     private boolean isPreviewing = false;
-    //	private float mPreviwRate = -1f;
     private static CameraInterface mCameraInterface;
 
     public interface CamOpenOverCallback {

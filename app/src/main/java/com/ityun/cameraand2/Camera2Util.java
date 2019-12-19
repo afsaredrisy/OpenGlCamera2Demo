@@ -40,18 +40,17 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
     private SurfaceView surfaceView;
     private CameraDevice mCamera;
     private CaptureRequest.Builder mPreviewBuilder;
-    //摄像头的id 也就是camera中的前后置的问题
+
     String camaraType = "0";
-    //前置还是后置摄像头
+
     private int cameratype;
     private CameraCaptureSession mSession;
     private ImageReader mImageReader;
-    // 创建拍照需要的CaptureRequest.Builder
+
     private CaptureRequest.Builder captureRequestBuilder;
     CameraCharacteristics characteristics;
-    //焦距
     int cameraZoom;
-    //是否打开闪光灯
+
     private boolean isLightOpen;
 
     public Camera2Util(Context context) {
@@ -67,25 +66,25 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
 
 
     private void init() {
-        //很多过程都变成了异步的了，所以这里需要一个子线程的looper
+
         HandlerThread handlerThread = new HandlerThread("Camera2");
         handlerThread.start();
         childHandler = new Handler(handlerThread.getLooper());
         mainHandler = new Handler(context.getMainLooper());
         cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
         surfaceView.getHolder().setKeepScreenOn(true);
-        //设置照片的大小
+
         mImageReader = ImageReader.newInstance(1080, 960, ImageFormat.JPEG, 5);
         mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader imageReader) {
-                // 拿到拍照照片数据
+
                 Image image = imageReader.acquireNextImage();
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                 byte[] bytes = new byte[buffer.remaining()];
-                buffer.get(bytes);//由缓冲区存入字节数组
+
                 image.close();
-                //saveBitmap(bytes);//保存照片的处理
+
             }
         }, mainHandler);
     }
@@ -118,7 +117,7 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
     @Override
     public int getMaxZoom() {
         /**
-         * 这边成5 上面成10 是因为如果值相同你会发现如果set的zoom大于最大值的一半时 有特么的开始缩放了 所以这里就给了一半
+         *
          */
         return (int) (characteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) * 5);
     }
@@ -163,7 +162,7 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
     @Override
     public void openLight(boolean open) {
         if (cameratype == 1) {
-            //如果是前置摄像头 打开个屁的闪光灯
+
             return;
         }
         if (open) {
@@ -229,14 +228,14 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
     }
 
     /**
-     * 摄像头创建监听
+     *
      */
     private CameraDevice.StateCallback mCameraDeviceStateCallback = new CameraDevice.StateCallback() {
 
         @Override
-        public void onOpened(CameraDevice camera) {//打开摄像头
+        public void onOpened(CameraDevice camera) {
             try {
-                //开启预览
+
                 mCamera = camera;
 
                 start(camera);
@@ -247,7 +246,7 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
 
         @Override
         public void onDisconnected(CameraDevice camera) {
-            //关闭摄像头
+
             if (mCamera != null) {
                 mCamera.close();
                 mCamera = null;
@@ -262,13 +261,7 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
 
 
     /**
-     * 通过对比得到与宽高比最接近的尺寸（如果有相同尺寸，优先选择）
      *
-     * @param surfaceWidth  需要被进行对比的原宽，surface view的宽度
-     * @param surfaceHeight 需要被进行对比的原高 surface view的高度
-     * @param preSizeList   得到的支持预览尺寸的list，parmeters.getSupportedPreviewSizes()
-     *                      需要对比的预览尺寸列表
-     * @return 得到与原宽高比例最接近的尺寸
      */
     protected Size getCloselyPreSize(int surfaceWidth, int surfaceHeight, Size[] preSizeList) {
         int ReqTmpWidth;
@@ -276,13 +269,13 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
 
         ReqTmpWidth = surfaceWidth;
         ReqTmpHeight = surfaceHeight;
-        // 先查找preview中是否存在与surfaceview相同宽高的尺寸
+
         for (Size size : preSizeList) {
             if ((size.getWidth() == ReqTmpWidth) && (size.getHeight() == ReqTmpHeight)) {
                 return size;
             }
         }
-        // 得到与传入的宽高比最接近的size
+
         float reqRatio = ((float) ReqTmpWidth) / ReqTmpHeight;
         float curRatio, deltaRatio;
         float deltaRatioMin = Float.MAX_VALUE;
@@ -298,19 +291,19 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
         return retSize;
     }
 
-    //开始预览，主要是camera.createCaptureSession这段代码很重要，创建会话
+
     private void start(final CameraDevice camera) throws CameraAccessException {
         try {
-            // 创建预览需要的CaptureRequest.Builder
+
             mPreviewBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            // 将SurfaceView的surface作为CaptureRequest.Builder的目标
+
             mPreviewBuilder.addTarget(surfaceView.getHolder().getSurface());
-            //默认预览不开启闪光灯
+
             mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
             mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
             mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
 
-            // 创建CameraCaptureSession，该对象负责管理处理预览请求和拍照请求
+
             camera.createCaptureSession(Arrays.asList(surfaceView.getHolder().getSurface(), mImageReader.getSurface()), mSessionStateCallback, childHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -318,7 +311,7 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
     }
 
     /**
-     * 会话状态回调
+     *
      */
     private CameraCaptureSession.StateCallback mSessionStateCallback = new CameraCaptureSession.StateCallback() {
         @Override
@@ -348,7 +341,7 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
     };
 
     /**
-     * 更新会话，开启预览
+     *
      *
      * @param session
      * @throws CameraAccessException
@@ -361,7 +354,7 @@ public class Camera2Util implements CameraInterface, SurfaceHolder.Callback {
         @Override
         public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
             super.onCaptureCompleted(session, request, result);
-            //需要连拍时，循环保存图片就可以了
+
         }
     };
 
